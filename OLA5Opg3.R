@@ -69,7 +69,7 @@ ggplot(freq, aes(x = Svar, y = Procent, fill = Gruppering)) +
   ) +
   theme_minimal() +
   theme(
-    text = element_text(size = 14),
+    text = element_text(size = 9),
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust = 0.5)
   )
@@ -112,7 +112,7 @@ branchekode <- read_excel("Dansk-Branchekode-2007-(DB07)-v3-2014.xlsx")
 # Giv samme colname ift. senere merging
 colnames(df)[colnames(df) == "Branchekode.primær"] <- "BRANCHEKODE"
 #tilsæt 0 på de koder med kun 5 cifre, så de matcher med dem fra DST
-df$BRANCHEKODE <- gsub("^([0-9]{5})$", "0\\1", df$BRANCHEKODE)
+df$BRANCHEKODE <- gsub("^([0-9]{5})$", "0\\1", df$BRANCHEKODE) 
 
 #Merge dem
 df <- merge(branchekode, df, by = "BRANCHEKODE") # Inner join, fordi branchekode skal findes i begge dataframes
@@ -212,23 +212,12 @@ str(DFCLM)
                   #  ALDER = as.numeric(DFCLM$ALDER)
                   #)
   # Hvorfor log på bal?
-  hist(DFCLM_Scaled$Balance_log)
   # Log-transform af Balance
   hist(scale(data$Balance.2020..1.000.kr.))
   hist(log(data$Balance.2020..1.000.kr.+1)) # +1 for at undgå log(0)
   
 
-  
-  
-            
-            ## Skal være chr, for at virke 
-            #DFCLM$Branche <- branch_labels[as.character(DFCLM$Branchekode)] 
-            ## Find de 3 største brancher med flest observationer
-            #top3_brancher <- names(sort(table(DFCLM$Branche), decreasing = TRUE))[1:3]
-            #DFCLM$Branche_gruppe <- ifelse(DFCLM$Branche %in% top3_brancher, 
-            #                               DFCLM$Branche, 
-            #                               "Andre brancher")
-            
+
             
           
   
@@ -239,7 +228,8 @@ str(DFCLM)
   # Årstal kan ikke tages med, da det er en factor
   CLM <- clm(Svar ~ Soliditetsgrad + Balance + AFKAST + Ansatte + ALDER + Egenkapital, data = DFCLM_Scaled)
   summary(CLM)
-
+# Cefficients viser en stigning fra 1 kategori til næste
+  
   # Find Buams argument, der modsiger at ansatte er signifikant, andet en bare 'sundfodnuft'
   # Virker mærkeligt, at afkast ikke har indflydelse, vi kan prøve med åretsresultat
   CLM1 <- clm(Svar ~ Soliditetsgrad + Balance + RESULTAT + Ansatte + ALDER + Egenkapital, data = DFCLM_Scaled)
@@ -298,7 +288,7 @@ str(DFCLM)
   branch_tabel$Procent <- round((branch_tabel$`Antal Svar` / sum(branch_tabel$`Antal Svar`)) * 100, 1)
   
   # Plot med procenter
-  ggplot(branch_tabel, aes(x = reorder(Branche, -Procent), y = Procent, fill = Branche)) +
+  ggplot(branch_tabel, aes(x = reorder(Branche, -Procent), y = Procent, fill = Branche)) + # reorder tager fra procent descending
     geom_bar(stat = "identity", color = "black") +
     labs(
       title = "98,9% af alle svar, kommer fra 3 brancher",
@@ -348,8 +338,15 @@ str(DFCLM)
     theme_minimal() +
     theme(
       text = element_text(size = 14),
-      plot.title = element_text(hjust = 0.5) # Centreret og fed overskrift
+      plot.title = element_text(hjust = 0.5), # Centreret og fed overskrift
+      panel.background = element_blank(),    # Transparent panel
+      plot.background = element_blank(),     # Transparent plot baggrund
+      legend.background = element_blank()    # Transparent legend baggrund
     )
+  
+  # Gem plottet med transparent baggrund
+  ggsave("soliditetsgrad_plot.png", bg = "transparent", width = 12, height = 6, dpi = 300)
+  
   
   ###### Balance ######
   DFCLM$gruppering <- ifelse(DFCLM$Svar %in% c("Dårlige", "Meget dårlige"), 
@@ -370,18 +367,25 @@ str(DFCLM)
   BalaDF$Procent <- round((BalaDF$Antal_Svar / sum(BalaDF$Antal_Svar)) * 100, 1)
   
   ggplot(BalaDF, aes(x = Balance_Interval, y = Procent, fill = Gruppe)) +
-  geom_bar(stat = "identity", position = "dodge",) +
-  scale_fill_manual(values = c("#002E6D", "#FAB958", "#A3E1CE")) + # Farver til grupper
-  labs(
-    title = "Ingen virksomheder med Balance >100M mener andet en positivt om lånemuligheder",
-    x = "Balance Intervaller (DKK)",
-    y = "Procent (%)"
-  ) +
-  theme_minimal() +
-  theme(
-    text = element_text(size = 14),
-    plot.title = element_text(hjust = 0.5) # Centreret overskrift
-  )
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_manual(values = c("#002E6D", "#FAB958", "#A3E1CE")) + # Farver til grupper
+    labs(
+      title = "Ingen virksomheder med Balance >100M mener andet end positivt om lånemuligheder",
+      x = "Balance Intervaller (DKK)",
+      y = "Procent (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      text = element_text(size = 14),
+      plot.title = element_text(hjust = 0.5), # Centreret overskrift
+      panel.background = element_blank(),    # Transparent panel baggrund
+      plot.background = element_blank(),     # Transparent plot baggrund
+      legend.background = element_blank()    # Transparent legend baggrund
+    )
+  
+  # Gem plottet som PNG med transparent baggrund
+  ggsave("balance_plot.png", bg = "transparent", width = 16, height = 10, dpi = 300)
+  
 
   
   ###### Afkastningsgrad ######
@@ -399,8 +403,14 @@ str(DFCLM)
     theme_minimal() +
     theme(
       text = element_text(size = 14),
-      plot.title = element_text(hjust = 0.5) # Centreret og fed overskrift
+      plot.title = element_text(hjust = 0.5), # Centreret overskrift
+      panel.background = element_blank(),    # Transparent panel baggrund
+      plot.background = element_blank(),     # Transparent plot baggrund
+      legend.background = element_blank()    # Transparent legend baggrund
     )
+  
+  # Gem plottet som PNG med transparent baggrund
+  ggsave("afkastningsgrad_plot.png", bg = "transparent", width = 12, height = 9, dpi = 300)
   
   
   ###### Resultat ######
@@ -460,6 +470,27 @@ str(DFCLM)
     include.lowest = TRUE
   )
   # Plot ALDER som procent
+  ggplot(AlderDF, aes(x = Alder_Interval, y = Procent, fill = Gruppe)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_manual(values = c("#002E6D", "#FAB958", "#A3E1CE")) + # Farver til grupper
+    labs(
+      title = "Differencen mellem neutral og positive bliver størrere med alderen på virksomheden",
+      x = "Aldersgruppe",
+      y = "Procent (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      text = element_text(size = 14),
+      plot.title = element_text(hjust = 0.5), # Centreret overskrift
+      panel.background = element_blank(),    # Transparent panel baggrund
+      plot.background = element_blank(),     # Transparent plot baggrund
+      legend.background = element_blank()    # Transparent legend baggrund
+    )
+  
+  # Gem plottet som PNG med transparent baggrund
+  ggsave("alder_plot.png", bg = "transparent", width = 16, height = 12, dpi = 300)
+  
+  
   EgenkapitalDF <- as.data.frame(table(DFCLM$EGENKAPITAL_kategori, DFCLM$gruppering))
   colnames(EgenkapitalDF) <- c("Egenkapital_Interval", "Gruppe", "Antal_Svar")
   
