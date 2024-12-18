@@ -14,7 +14,7 @@ sum(is.na(data)) # Se antallet af NAs
 
 # Se mulige svar
 unique(data$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål.)
-# Kan se at der er 2 forskellige: dårlig og dårlige
+# Kan se at der er 2 forskellige: dårlig og dårlige                                                 \\b = ordstart og ordslutning, fast defineret ord
 data$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål. <- gsub("\\bDårlig\\b","Dårlige",data$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål.)
 unique(data$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål.)
 
@@ -28,7 +28,7 @@ colnames(freq) <- c("Svar", "Frekvens")
 
 # ny df uden 'Ved ikke'
 df <- subset(data, Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål. != "Ved ikke")
-# Går fra 4484 til 4433
+# Går fra 4484 til 4433 -51 obs
 df$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål. <- factor(
   df$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål.,
   levels = c("Meget dårlige", "Dårlige", "Neutrale", "Gode", "Meget gode"), 
@@ -112,6 +112,7 @@ branchekode <- read_excel("Dansk-Branchekode-2007-(DB07)-v3-2014.xlsx")
 # Giv samme colname ift. senere merging
 colnames(df)[colnames(df) == "Branchekode.primær"] <- "BRANCHEKODE"
 #tilsæt 0 på de koder med kun 5 cifre, så de matcher med dem fra DST
+#                       ^ start at srt, $ slut af str, det vil sige KUN dem med præcist 5 digits, ingen andre
 df$BRANCHEKODE <- gsub("^([0-9]{5})$", "0\\1", df$BRANCHEKODE) 
 
 #Merge dem
@@ -142,7 +143,7 @@ DFCLM <- data.frame(
   RESULTAT = df$Primært.Resultat.2020..1.000.kr.,
   Ansatte = df$Antal.ansatte.Cvr.nr.,
   ALDER = df$Etableringsdato,
-  ÅRSTAL = substr(df$Etableringsdato,7,10),
+  ÅRSTAL = substr(df$Etableringsdato,7,10), # kun årstal
   Egenkapital = df$Egenkapital.2020..1.000.kr.,
   Branchekode = df$GRP10KODE
 )
@@ -153,7 +154,7 @@ DFCLM$Branche <- branch_labels[DFCLM$Branchekode]
     antal_na_rækker <- sum(apply(DFCLM, 1, function(x) any(is.na(x))))
     print(antal_na_rækker)
     # Kun 14 na, lad os se hvor de er
-      na_positioner <- which(is.na(DFCLM), arr.ind = TRUE)
+      na_positioner <- which(is.na(DFCLM), arr.ind = TRUE) # arr.ind retunere positionsindeks (altså række og kolonne)
       print(na_positioner)
       DFCLM <- na.omit(DFCLM)
         # obs 4433 -> 4419
@@ -200,21 +201,11 @@ str(DFCLM)
           Egenkapital = as.numeric(scale(DFCLM$Egenkapital)),
           ALDER = as.numeric(scale(DFCLM$ALDER))
   )
-                  #DFCLM_Scaled <- data.frame(
-                  #  Svar = DFCLM$Svar,
-                  #  Soliditetsgrad = as.numeric(DFCLM$Soliditetsgrad),
-                  #  Balance_log = as.numeric(log(DFCLM$Balance)), # Ingen negative balancer, så kan ignorer chance for log(0)
-                  #  #Balance = as.numeric(DFCLM$Balance),
-                  #  AFKAST = as.numeric(DFCLM$AFKAST),
-                  #  RESULTAT = as.numeric(DFCLM$RESULTAT),
-                  #  Ansatte = as.numeric(DFCLM$Ansatte),
-                  #  Egenkapital = as.numeric(DFCLM$Egenkapital),
-                  #  ALDER = as.numeric(DFCLM$ALDER)
-                  #)
-  # Hvorfor log på bal?
-  # Log-transform af Balance
-  hist(scale(data$Balance.2020..1.000.kr.))
-  hist(log(data$Balance.2020..1.000.kr.+1)) # +1 for at undgå log(0)
+
+ # # Hvorfor log på bal?
+ # # Log-transform af Balance
+ # hist(scale(data$Balance.2020..1.000.kr.))
+ # hist(log(data$Balance.2020..1.000.kr.+1)) # +1 for at undgå log(0)
   
 
 
@@ -229,8 +220,20 @@ str(DFCLM)
   CLM <- clm(Svar ~ Soliditetsgrad + Balance + AFKAST + Ansatte + ALDER + Egenkapital, data = DFCLM_Scaled)
   summary(CLM)
 # Cefficients viser en stigning fra 1 kategori til næste
+
   
-  # Find Buams argument, der modsiger at ansatte er signifikant, andet en bare 'sundfodnuft'
+                
+                        DFCLM_Scaled_reordered <- DFCLM_Scaled
+                        DFCLM_Scaled_reordered$Svar <- factor(
+                          DFCLM_Scaled_reordered$Svar,
+                          levels = c("Meget gode", "Gode", "Neutral", "Dårlige", "Meget dårlige"), # Ny rækkefølge
+                          ordered = TRUE)
+                        levels(DFCLM_Scaled_reordered$Svar)
+                        CLM_reordered <- clm(Svar ~ Soliditetsgrad + Balance + AFKAST + Ansatte + ALDER + Egenkapital, data = DFCLM_Scaled_reordered)
+                        summary(CLM_reordered)
+                          # Her er ansatte ikke signifikant
+  
+  
   # Virker mærkeligt, at afkast ikke har indflydelse, vi kan prøve med åretsresultat
   CLM1 <- clm(Svar ~ Soliditetsgrad + Balance + RESULTAT + Ansatte + ALDER + Egenkapital, data = DFCLM_Scaled)
   summary(CLM1)
@@ -245,14 +248,15 @@ str(DFCLM)
     Balance_2017 = df$Balance.2017..1.000.kr.,
     Balance_2016 = df$Balance.2016..1.000.kr. )
                
-  Balancedf$Balance_2020 <- as.numeric(scale(Balancedf$Balance_2020))
-  Balancedf$Balance_2019 <- as.numeric(scale(Balancedf$Balance_2019))
-  Balancedf$Balance_2018 <- as.numeric(scale(Balancedf$Balance_2018))
-  Balancedf$Balance_2017 <- as.numeric(scale(Balancedf$Balance_2017))
-  Balancedf$Balance_2016 <- as.numeric(scale(Balancedf$Balance_2016))
+  Balancedf$Balance_2020 <- as.numeric(log(Balancedf$Balance_2020))
+  Balancedf$Balance_2019 <- as.numeric(log(Balancedf$Balance_2019))
+  Balancedf$Balance_2018 <- as.numeric(log(Balancedf$Balance_2018))
+  Balancedf$Balance_2017 <- as.numeric(log(Balancedf$Balance_2017))
+  Balancedf$Balance_2016 <- as.numeric(log(Balancedf$Balance_2016))
   
   clm_Bal <- clm(Svar ~ Balance_2020 + Balance_2019 + Balance_2018 + Balance_2017 + Balance_2016, data = Balancedf)
   summary(clm_Bal)
+  
   
   Egenkapitaldf <- data.frame(
     Svar = df$Hvordan.ser.du.mulighederne.for.at.låne.penge.til.din.virksomhed...fiktivt.spørgsmål.,
@@ -263,11 +267,11 @@ str(DFCLM)
     Egenkapital_2017 = df$Egenkapital.2017..1.000.kr.,
     Egenkapital_2016 = df$Egenkapital.2016..1.000.kr. )
   
-  Egenkapitaldf$Egenkapital_2020 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2020))
-  Egenkapitaldf$Egenkapital_2019 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2019))
-  Egenkapitaldf$Egenkapital_2018 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2018))
-  Egenkapitaldf$Egenkapital_2017 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2017))
-  Egenkapitaldf$Egenkapital_2016 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2016))
+  Egenkapitaldf$Egenkapital_2020 <- as.numeric(log(Egenkapitaldf$Egenkapital_2020 + 1))
+  Egenkapitaldf$Egenkapital_2019 <- as.numeric(log(Egenkapitaldf$Egenkapital_2019 + 1))
+  Egenkapitaldf$Egenkapital_2018 <- as.numeric(log(Egenkapitaldf$Egenkapital_2018 + 1))
+  Egenkapitaldf$Egenkapital_2017 <- as.numeric(log(Egenkapitaldf$Egenkapital_2017 + 1))
+  Egenkapitaldf$Egenkapital_2016 <- as.numeric(log(Egenkapitaldf$Egenkapital_2016 + 1))
   
   clm_Egen <- clm(Svar ~ Egenkapital_2020 + Egenkapital_2019 + Egenkapital_2018 + Egenkapital_2017 + Egenkapital_2016, data = Egenkapitaldf)
   summary(clm_Egen)
@@ -382,6 +386,35 @@ str(DFCLM)
       plot.background = element_blank(),     # Transparent plot baggrund
       legend.background = element_blank()    # Transparent legend baggrund
     )
+  
+  # Tilføj en ny kolonne for log-transformeret Balance
+  DFCLM$Log_Balance <- log(DFCLM$Balance + 1) # +1 for at undgå log(0)
+  
+  # Beregn gennemsnitlig log(Balance) for hver gruppe
+  LogBalDF <- aggregate(Log_Balance ~ gruppering, data = DFCLM, FUN = mean)
+  colnames(LogBalDF) <- c("Gruppe", "Log_Balance_GNS")
+  
+  # Plot gennemsnitlig log(Balance)
+  ggplot(LogBalDF, aes(x = Gruppe, y = Log_Balance_GNS, fill = Gruppe)) +
+    geom_bar(stat = "identity", color = "black") +
+    scale_fill_manual(values = c("#A3E1CE","#FAB958","#002E6D")) +
+    labs(
+      title = "En højere log(balance), gør virksomhederne mere positive",
+      x = "Svargruppe",
+      y = "log(Balance)"
+    ) +
+    theme_minimal() +
+    theme(
+      text = element_text(size = 14),
+      plot.title = element_text(hjust = 0.5),
+      panel.background = element_blank(),    # Transparent panel baggrund
+      plot.background = element_blank(),     # Transparent plot baggrund
+      legend.background = element_blank()    # Transparent legend baggrund
+    )
+  
+  # Gem plottet med transparent baggrund
+  ggsave("log_balance_plot.png", bg = "transparent", width = 12, height = 8, dpi = 300)
+  
   
   # Gem plottet som PNG med transparent baggrund
   ggsave("balance_plot.png", bg = "transparent", width = 16, height = 10, dpi = 300)
