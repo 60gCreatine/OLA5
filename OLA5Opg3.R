@@ -267,11 +267,11 @@ str(DFCLM)
     Egenkapital_2017 = df$Egenkapital.2017..1.000.kr.,
     Egenkapital_2016 = df$Egenkapital.2016..1.000.kr. )
   
-  Egenkapitaldf$Egenkapital_2020 <- as.numeric(log(Egenkapitaldf$Egenkapital_2020 + 1))
-  Egenkapitaldf$Egenkapital_2019 <- as.numeric(log(Egenkapitaldf$Egenkapital_2019 + 1))
-  Egenkapitaldf$Egenkapital_2018 <- as.numeric(log(Egenkapitaldf$Egenkapital_2018 + 1))
-  Egenkapitaldf$Egenkapital_2017 <- as.numeric(log(Egenkapitaldf$Egenkapital_2017 + 1))
-  Egenkapitaldf$Egenkapital_2016 <- as.numeric(log(Egenkapitaldf$Egenkapital_2016 + 1))
+  Egenkapitaldf$Egenkapital_2020 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2020))
+  Egenkapitaldf$Egenkapital_2019 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2019))
+  Egenkapitaldf$Egenkapital_2018 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2018))
+  Egenkapitaldf$Egenkapital_2017 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2017))
+  Egenkapitaldf$Egenkapital_2016 <- as.numeric(scale(Egenkapitaldf$Egenkapital_2016))
   
   clm_Egen <- clm(Svar ~ Egenkapital_2020 + Egenkapital_2019 + Egenkapital_2018 + Egenkapital_2017 + Egenkapital_2016, data = Egenkapitaldf)
   summary(clm_Egen)
@@ -544,6 +544,21 @@ str(DFCLM)
       text = element_text(size = 14),
       plot.title = element_text(hjust = 0.5) # Centreret overskrift
     )
+  
+  
+  #### Kommentar/Live codning fra eksmane ####
+  # Præsentationslink
+  # https://www.canva.com/design/DAGZlIBk3IY/2EuRKh8xFDjh_dIb-QD1Fg/edit?utm_content=DAGZlIBk3IY&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+  
+  
+  # Se om der er correlation mellem Alder og Log_Balance
+    # Dette er gjort, for at lave om på det plot, opdelt ved Alder i Canva
+  ALderDF1 <- aggregate(DFCLM$ALDER, list(DFCLM$gruppering), FUN=mean)
+  ALderDF1$x <- ALderDF1$x / 365
+  
+  DFCLM$AlderDage <- round(DFCLM$ALDER / 365,2)
+  cor <- cor(log(DFCLM$AlderDage), DFCLM$Log_Balance)
+  
   
   
   
